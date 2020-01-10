@@ -1,0 +1,87 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.4
+  creationTimestamp: null
+  name: logicalclusters.scheduler-mgr.ucloud.cn
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.nodes[*]
+    name: Contained Nodes
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    name: Age
+    type: date
+  group: scheduler-mgr.ucloud.cn
+  names:
+    kind: LogicalCluster
+    listKind: LogicalClusterList
+    plural: logicalclusters
+    shortNames:
+    - lc
+    - lcs
+    singular: logicalcluster
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: LogicalCluster is the Schema for the logicalclusters API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: LogicalClusterSpec defines the desired state of LogicalCluster
+          properties:
+            name:
+              description: Foo is an example field of LogicalCluster. Edit LogicalCluster_types.go
+                to remove/update
+              type: string
+            nodes:
+              items:
+                type: string
+              type: array
+          required:
+          - name
+          - nodes
+          type: object
+        status:
+          description: LogicalClusterStatus defines the observed state of LogicalCluster
+          properties:
+            labeled_nodes:
+              items:
+                type: string
+              type: array
+            labeled_nodes_num:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              type: integer
+          required:
+          - labeled_nodes_num
+          type: object
+      type: object
+  version: v1
+  versions:
+  - name: v1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

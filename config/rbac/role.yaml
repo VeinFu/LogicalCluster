@@ -1,0 +1,28 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - scheduler-mgr.ucloud.io
+  resources:
+  - logicalclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - scheduler-mgr.ucloud.io
+  resources:
+  - logicalclusters/status
+  verbs:
+  - get
+  - patch
+  - update

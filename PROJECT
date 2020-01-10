@@ -1,0 +1,7 @@
+domain: ucloud.cn
+repo: LogicalCluster
+resources:
+- group: scheduler-mgr
+  kind: LogicalCluster
+  version: v1
+version: "2"

@@ -1,0 +1,9 @@
+apiVersion: scheduler-mgr.ucloud.cn/v1
+kind: LogicalCluster
+metadata:
+  name: redis-cluster
+spec:
+  # Add fields here
+  name: redis-cluster
+  nodes:
+  - vinefu-dev
