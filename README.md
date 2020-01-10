@@ -13,27 +13,27 @@
 ```bash
 # 下载源码到本地
 cd $GOPATH/src/
-git clone git@github.com:VeinFu/example.git
+git clone git@github.com:VeinFu/LogicalCluster.git
 
 # 编译
-cd example/
+cd LogicalCluster/
 make && make install
 
 # 制作镜像和上传镜像
-make docker-build docker-push IMG=<image_repo>/logical-cluster-crd-img:v1
+make docker-build docker-push IMG=<image_repo>/logical-cluster-img:v1
 
 # 如果远端K8s集群的机器没法访问镜像仓库，可以先把镜像打成tar包，然后通过scp上传至K8s集群，之后导入
-docker save -0 logical_cluster.tar <image_repo>/logical-cluster-crd-img:v1
-scp logical-cluster.tar root@<remote_ip>:/root
+docker save -0 logical_cluster.tar <image_repo>/logical-cluster-img:v1
+scp logical_cluster.tar root@<remote_ip>:/root
 ssh root@<remote_ip> docker load --input /root/logical_cluster.tar
 
 # 部署controller
-make deploy IMG=<image_repo>/logical-cluster-crd-img:v1
+make deploy IMG=<image_repo>/logical-cluster-img:v1
 ```
 
 如此部署算是基本完成，下面是验证环节：
 ```bash
-cd example/
+cd LogicalCluster/
 # 创建逻辑集群
 kubectl create -f config/samples/scheduler-mgr_v1_logicalcluster.yaml
 kubectl get lcs
