@@ -9,8 +9,11 @@ metadata:
   name: logicalclusters.scheduler-mgr.ucloud.cn
 spec:
   additionalPrinterColumns:
-  - JSONPath: .spec.nodes[*]
-    name: Contained Nodes
+  - JSONPath: .status.currentLabeledNodeNum
+    name: Ready Nodes
+    type: string
+  - JSONPath: .status.expectedLabeledNodeNum
+    name: Expected Nodes
     type: string
   - JSONPath: .metadata.creationTimestamp
     name: Age
@@ -61,17 +64,13 @@ spec:
         status:
           description: LogicalClusterStatus defines the observed state of LogicalCluster
           properties:
-            labeled_nodes:
-              items:
-                type: string
-              type: array
-            labeled_nodes_num:
+            currentLabeledNodeNum:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
                 this file'
               type: integer
-          required:
-          - labeled_nodes_num
+            expectedLabeledNodeNum:
+              type: integer
           type: object
       type: object
   version: v1

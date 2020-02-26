@@ -36,14 +36,15 @@ type LogicalClusterSpec struct {
 type LogicalClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	LabeledNodesNum int      `json:"labeled_nodes_num"`
-	LabeledNodes    []string `json:"labeled_nodes,omitempty"`
+	CurrentLabeledNodeNum  int `json:"currentLabeledNodeNum,omitempty"`
+	ExpectedLabeledNodeNum int `json:"expectedLabeledNodeNum,omitempty"`
 }
 
 // +kubebuilder:subresource:status
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=lc;lcs
-// +kubebuilder:printcolumn:JSONPath=".spec.nodes[*]",name=Contained Nodes,type=string
+// +kubebuilder:printcolumn:JSONPath=".status.currentLabeledNodeNum",name=Ready Nodes,type=string
+// +kubebuilder:printcolumn:JSONPath=".status.expectedLabeledNodeNum",name=Expected Nodes,type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=Age,type=date
 
 // LogicalCluster is the Schema for the logicalclusters API

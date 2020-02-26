@@ -52,7 +52,7 @@ func (r *LogicalClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	// 终结器的设置
+	// 设置终结器，删除逻辑集群
 	lClusterFinalizerName := "clusterDelete"
 	if logicalClusterIns.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !ContainsString(logicalClusterIns.ObjectMeta.Finalizers, lClusterFinalizerName, nil) {
@@ -74,12 +74,14 @@ func (r *LogicalClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 	}
 
-	if err := r.syncLogicalClusterStatus(logicalClusterIns); err != nil {
+	// 同步逻辑集群的状态信息
+	if err := r.syncLogicalClusterStatus(logicalClusterIns, log); err != nil {
 		log.Info("sync LogicalCluster status failed")
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcileLogicalClusterIns(logicalClusterIns); err != nil {
+	// 逻辑集群协调主逻辑
+	if err := r.reconcileLogicalClusterIns(logicalClusterIns, log); err != nil {
 		log.Info("reconcile LogicalCluster error")
 		return ctrl.Result{}, err
 	}
@@ -93,14 +95,15 @@ func (r *LogicalClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *LogicalClusterReconciler) syncLogicalClusterStatus(logicalClusterIns *schedulermgrv1.LogicalCluster) error {
-	if logicalClusterIns.Status.LabeledNodesNum != 0 && logicalClusterIns.Status.LabeledNodesNum == len(logicalClusterIns.Spec.Nodes) {
+func (r *LogicalClusterReconciler) syncLogicalClusterStatus(logicalClusterIns *schedulermgrv1.LogicalCluster, log logr.Logger) error {
+	if logicalClusterIns.Status.CurrentLabeledNodeNum != 0 && logicalClusterIns.Status.CurrentLabeledNodeNum == len(logicalClusterIns.Spec.Nodes) {
+		log.Info("Labels of all nodes in cluster have updated")
 		return nil
 	}
 
 	ctx := context.Background()
 
-	newStatus, err := r.calcuteStatus(logicalClusterIns)
+	newStatus, err := r.calcuteStatus(logicalClusterIns, log)
 	if err != nil {
 		return err
 	}
@@ -113,32 +116,52 @@ func (r *LogicalClusterReconciler) syncLogicalClusterStatus(logicalClusterIns *s
 	return nil
 }
 
-func (r *LogicalClusterReconciler) reconcileLogicalClusterIns(logicalClusterIns *schedulermgrv1.LogicalCluster) error {
-	if logicalClusterIns.Status.LabeledNodesNum != 0 && logicalClusterIns.Status.LabeledNodesNum == len(logicalClusterIns.Spec.Nodes) {
+func (r *LogicalClusterReconciler) reconcileLogicalClusterIns(logicalClusterIns *schedulermgrv1.LogicalCluster, log logr.Logger) error {
+	if logicalClusterIns.Status.CurrentLabeledNodeNum != 0 && logicalClusterIns.Status.CurrentLabeledNodeNum == logicalClusterIns.Status.ExpectedLabeledNodeNum {
+		log.Info("Labels of all nodes in cluster have updated")
 		return nil
 	}
 
-	var unLabeledNodes []string
-	for _, node := range logicalClusterIns.Spec.Nodes {
-		if !ContainsString(logicalClusterIns.Status.LabeledNodes, node, nil) {
-			unLabeledNodes = append(unLabeledNodes, node)
-		}
-		continue
-	}
-
-	if err := AddOrUpdateNodeLabel(r.ExtraClient, unLabeledNodes, logicalClusterIns.Name); err != nil {
+	nodeList, err := GetNodesFromCluster(r.ExtraClient, logicalClusterIns.Name)
+	if err != nil {
 		return err
+	}
+	var labelDealedNodes []string
+	// 根据逻辑集群主机节点数目的添加/移除，相应的对节点进行标签的添加/移除
+	if logicalClusterIns.Status.ExpectedLabeledNodeNum > logicalClusterIns.Status.CurrentLabeledNodeNum {
+		log.Info("Some nodes label need to be added.")
+		for _, node := range logicalClusterIns.Spec.Nodes {
+			if !ContainsString(nodeList, node, nil) {
+				labelDealedNodes = append(labelDealedNodes, node)
+			}
+			continue
+		}
+
+		if err := AddOrUpdateNodeLabel(r.ExtraClient, labelDealedNodes, logicalClusterIns.Name); err != nil {
+			return err
+		}
+	} else if len(logicalClusterIns.Spec.Nodes) < logicalClusterIns.Status.CurrentLabeledNodeNum {
+		log.Info("Some nodes label need to be removed.")
+		for _, node := range nodeList {
+			if !ContainsString(logicalClusterIns.Spec.Nodes, node, nil) {
+				labelDealedNodes = append(labelDealedNodes, node)
+			}
+			continue
+		}
+		if err := RemoveLabelFromNode(r.ExtraClient, labelDealedNodes); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (r *LogicalClusterReconciler) calcuteStatus(logicalClusterIns *schedulermgrv1.LogicalCluster) (schedulermgrv1.LogicalClusterStatus, error) {
+func (r *LogicalClusterReconciler) calcuteStatus(logicalClusterIns *schedulermgrv1.LogicalCluster, log logr.Logger) (schedulermgrv1.LogicalClusterStatus, error) {
 	var nodeList []string
 
 	newStatus := schedulermgrv1.LogicalClusterStatus{
-		LabeledNodesNum: len(nodeList),
-		LabeledNodes:    []string{},
+		CurrentLabeledNodeNum:  len(nodeList),
+		ExpectedLabeledNodeNum: len(logicalClusterIns.Spec.Nodes),
 	}
 
 	nodeList, err := GetNodesFromCluster(r.ExtraClient, logicalClusterIns.Name)
@@ -146,8 +169,7 @@ func (r *LogicalClusterReconciler) calcuteStatus(logicalClusterIns *schedulermgr
 		return newStatus, err
 	}
 
-	newStatus.LabeledNodesNum = len(nodeList)
-	newStatus.LabeledNodes = nodeList
+	newStatus.CurrentLabeledNodeNum = len(nodeList)
 
 	return newStatus, nil
 }
